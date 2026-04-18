@@ -41,6 +41,63 @@ Copy `custom_components/rest_bed/` into your HA `config/custom_components/` dire
 | Binary Sensor | 4 | Occupancy, moving, air filling, overheated |
 | Switch | 1 | Quiet mode |
 
+## WiFi Setup Utility
+
+A standalone CLI tool (`tools/rest_bed_setup.py`) replicates the official Android app's WiFi setup flow. Zero external dependencies — uses only the Python standard library.
+
+### When you need it
+
+If a pump loses its WiFi connection it falls back to **AP / hotspot mode**, broadcasting an SSID like `ReST-XXXXXX`. The official app may not always be available, so this utility lets you reconfigure WiFi from any computer with Python 3.
+
+### Quick start
+
+```bash
+# 1. Connect your computer to the pump's hotspot (ReST-XXXXXX)
+# 2. Interactive setup (pump defaults to 10.0.0.1):
+python3 tools/rest_bed_setup.py setup
+
+# Non-interactive — set WiFi directly:
+python3 tools/rest_bed_setup.py wifi --host 10.0.0.1 \
+  --ssid "MyNetwork" --password "MyPassword"
+```
+
+### All commands
+
+| Command | Description |
+|---------|-------------|
+| `setup` | Interactive first-time WiFi setup (connect to pump AP first) |
+| `wifi` | Set WiFi credentials on a reachable pump |
+| `status` | Show device info, WiFi, firmware, cloud, temperatures |
+| `scan` | List WiFi networks visible to the pump |
+| `direct` | Switch pump to AP / hotspot mode |
+| `indirect` | Switch pump to WiFi client mode |
+| `dump` | Dump full `/api` state as JSON |
+
+### Examples
+
+```bash
+# Check status of a pump on your network
+python3 tools/rest_bed_setup.py status --host 10.0.17.182
+
+# Scan what WiFi networks the pump can see
+python3 tools/rest_bed_setup.py scan --host 10.0.17.182
+
+# Force a pump back into AP mode (for troubleshooting)
+python3 tools/rest_bed_setup.py direct --host 10.0.17.182
+
+# Dump full device state as JSON
+python3 tools/rest_bed_setup.py dump --host 10.0.17.182
+```
+
+### WiFi setup protocol
+
+| Step | Endpoint | Method | Payload |
+|------|----------|--------|---------|
+| 1 | Pump broadcasts AP `ReST-<mac>` at `10.0.0.1` | — | — |
+| 2 | `/api/wifi/list` | GET | Returns visible SSIDs |
+| 3 | `/api/wifi` | PUT | `{"ssid": "...", "password": "..."}` |
+| 4 | `/api/wifi/mode` | PUT | `"indirect"` (switches from AP to client) |
+
 ## Protocol
 
 The pump exposes an unauthenticated HTTP API on port 80. Real-time updates stream via SSE at `/api/sse`. See the [full protocol specification](https://github.com/HolyBitsLLC/ha-rest-bed/blob/main/docs/protocol.md) for details.
