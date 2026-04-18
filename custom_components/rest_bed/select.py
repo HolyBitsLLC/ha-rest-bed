@@ -24,6 +24,12 @@ class RestBedModeSelect(RestBedEntity, SelectEntity):
     _attr_name = "Mode"
     _attr_icon = "mdi:bed-king"
     _attr_options = MODES
+    _description = (
+        "Operating mode. Manual: set each zone independently. "
+        "Automatic: AI dynamically adjusts based on body position and pressure. "
+        "Position: uses Back/Side profiles when a position change is detected. "
+        "Pressure: maintains the global firmness target uniformly across all zones."
+    )
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "mode")

@@ -24,6 +24,7 @@ async def async_setup_entry(
 class RestBedQuietSwitch(RestBedEntity, SwitchEntity):
     _attr_name = "Quiet Mode"
     _attr_icon = "mdi:volume-off"
+    _description = "Reduces pump motor speed for quieter nighttime operation. Adjustments take longer but produce less noise."
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "quiet")

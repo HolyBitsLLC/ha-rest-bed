@@ -1,5 +1,7 @@
 """Base entity for ReST Performance Bed."""
 
+from __future__ import annotations
+
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -11,6 +13,14 @@ class RestBedEntity(CoordinatorEntity[RestBedCoordinator]):
     """Base class for all ReST bed entities."""
 
     _attr_has_entity_name = True
+    _description: str | None = None
+
+    @property
+    def extra_state_attributes(self) -> dict | None:
+        """Expose an optional human-readable description as a state attribute."""
+        if self._description:
+            return {"description": self._description}
+        return None
 
     def __init__(self, coordinator: RestBedCoordinator, key: str) -> None:
         super().__init__(coordinator)

@@ -43,6 +43,36 @@
           "description": "The WiFi network password."
         }
       }
+    },
+    "save_preset": {
+      "name": "Save preset",
+      "description": "Save the current settings of all configured pumps as a named preset.",
+      "fields": {
+        "name": {
+          "name": "Preset name",
+          "description": "A short name for this preset."
+        }
+      }
+    },
+    "restore_preset": {
+      "name": "Restore preset",
+      "description": "Restore a previously saved preset, applying all stored settings to the corresponding pumps.",
+      "fields": {
+        "name": {
+          "name": "Preset name",
+          "description": "The name of the preset to restore."
+        }
+      }
+    },
+    "delete_preset": {
+      "name": "Delete preset",
+      "description": "Delete a previously saved preset by name.",
+      "fields": {
+        "name": {
+          "name": "Preset name",
+          "description": "The name of the preset to delete."
+        }
+      }
     }
   }
 }

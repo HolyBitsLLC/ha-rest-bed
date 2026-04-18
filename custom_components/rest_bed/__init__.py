@@ -9,6 +9,7 @@ from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.storage import Store
 
 from .api import RestBedPump
 from .coordinator import RestBedCoordinator
@@ -34,6 +35,45 @@ SERVICE_SET_WIFI_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_SAVE_PRESET = "save_preset"
+SERVICE_RESTORE_PRESET = "restore_preset"
+SERVICE_DELETE_PRESET = "delete_preset"
+
+SERVICE_PRESET_NAME_SCHEMA = vol.Schema(
+    {vol.Required("name"): cv.string}
+)
+
+STORAGE_VERSION = 1
+STORAGE_KEY = f"{DOMAIN}.presets"
+
+PREF_KEYS = (
+    "mode", "firmness", "distortion", "tolerance", "sensitivity",
+    "quiet", "manualprofile", "backprofile", "sideprofile",
+)
+
+
+async def _apply_prefs(coord: RestBedCoordinator, prefs: dict) -> None:
+    """Send saved preference values to a pump."""
+    p = coord.pump
+    if "mode" in prefs:
+        await p.set_mode(prefs["mode"])
+    if "firmness" in prefs:
+        await p.set_firmness(prefs["firmness"])
+    if "distortion" in prefs:
+        await p.set_distortion(prefs["distortion"])
+    if "tolerance" in prefs:
+        await p.set_tolerance(prefs["tolerance"])
+    if "sensitivity" in prefs:
+        await p.set_sensitivity(prefs["sensitivity"])
+    if "quiet" in prefs:
+        await p.set_quiet(prefs["quiet"])
+    if "manualprofile" in prefs:
+        await p.set_manual_profile(prefs["manualprofile"])
+    if "backprofile" in prefs:
+        await p.set_back_profile(prefs["backprofile"])
+    if "sideprofile" in prefs:
+        await p.set_side_profile(prefs["sideprofile"])
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: RestBedConfigEntry
@@ -45,7 +85,15 @@ async def async_setup_entry(
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Register per-entry set_wifi service (once globally)
+    # Initialize shared domain data once (preset storage, etc.)
+    if DOMAIN not in hass.data:
+        store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+        hass.data[DOMAIN] = {
+            "store": store,
+            "presets": await store.async_load() or {},
+        }
+
+    # Register domain services (once globally)
     if not hass.services.has_service(DOMAIN, SERVICE_SET_WIFI):
 
         async def handle_set_wifi(call: ServiceCall) -> None:
@@ -72,6 +120,75 @@ async def async_setup_entry(
             schema=SERVICE_SET_WIFI_SCHEMA,
         )
 
+        async def handle_save_preset(call: ServiceCall) -> None:
+            name = call.data["name"]
+            domain_data = hass.data[DOMAIN]
+            snapshot: dict[str, dict] = {}
+            for ent in hass.config_entries.async_entries(DOMAIN):
+                coord: RestBedCoordinator = ent.runtime_data
+                prefs = coord.data.get("preferences", {})
+                pump_id = coord.device_info_data["id"]
+                snapshot[pump_id] = {
+                    k: prefs[k] for k in PREF_KEYS if k in prefs
+                }
+            domain_data["presets"][name] = snapshot
+            await domain_data["store"].async_save(domain_data["presets"])
+            _LOGGER.info(
+                "Saved preset '%s' for %d pump(s)", name, len(snapshot)
+            )
+
+        async def handle_restore_preset(call: ServiceCall) -> None:
+            name = call.data["name"]
+            domain_data = hass.data[DOMAIN]
+            presets = domain_data["presets"]
+            if name not in presets:
+                _LOGGER.error("Preset '%s' not found", name)
+                return
+            snapshot = presets[name]
+            for ent in hass.config_entries.async_entries(DOMAIN):
+                coord: RestBedCoordinator = ent.runtime_data
+                pump_id = coord.device_info_data["id"]
+                saved = snapshot.get(pump_id)
+                if not saved:
+                    continue
+                await _apply_prefs(coord, saved)
+                coord.data.get("preferences", {}).update(saved)
+                coord.async_set_updated_data(coord.data)
+                _LOGGER.info(
+                    "Restored preset '%s' on pump %s", name, pump_id
+                )
+
+        async def handle_delete_preset(call: ServiceCall) -> None:
+            name = call.data["name"]
+            domain_data = hass.data[DOMAIN]
+            if name in domain_data["presets"]:
+                del domain_data["presets"][name]
+                await domain_data["store"].async_save(
+                    domain_data["presets"]
+                )
+                _LOGGER.info("Deleted preset '%s'", name)
+            else:
+                _LOGGER.warning("Preset '%s' not found", name)
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SAVE_PRESET,
+            handle_save_preset,
+            schema=SERVICE_PRESET_NAME_SCHEMA,
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_RESTORE_PRESET,
+            handle_restore_preset,
+            schema=SERVICE_PRESET_NAME_SCHEMA,
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_DELETE_PRESET,
+            handle_delete_preset,
+            schema=SERVICE_PRESET_NAME_SCHEMA,
+        )
+
     return True
 
 
@@ -80,7 +197,11 @@ async def async_unload_entry(
 ) -> bool:
     await entry.runtime_data.async_shutdown()
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    # Unregister service if no entries remain
+    # Unregister services and clean up domain data if no entries remain
     if unloaded and not hass.config_entries.async_entries(DOMAIN):
         hass.services.async_remove(DOMAIN, SERVICE_SET_WIFI)
+        hass.services.async_remove(DOMAIN, SERVICE_SAVE_PRESET)
+        hass.services.async_remove(DOMAIN, SERVICE_RESTORE_PRESET)
+        hass.services.async_remove(DOMAIN, SERVICE_DELETE_PRESET)
+        hass.data.pop(DOMAIN, None)
     return unloaded

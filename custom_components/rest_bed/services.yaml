@@ -19,3 +19,42 @@ set_wifi:
       selector:
         text:
           type: password
+
+save_preset:
+  name: Save preset
+  description: >-
+    Save the current settings of all configured pumps as a named preset.
+    Captures mode, firmness, distortion, tolerance, sensitivity, quiet mode,
+    and all zone profiles (manual, back, side).
+  fields:
+    name:
+      name: Preset name
+      description: A short name for this preset (e.g. "Firm", "Soft", "Whitney Likes").
+      required: true
+      selector:
+        text:
+
+restore_preset:
+  name: Restore preset
+  description: >-
+    Restore a previously saved preset, applying all stored settings to
+    the corresponding pumps. Changes mode, firmness, and all zone profiles.
+  fields:
+    name:
+      name: Preset name
+      description: The name of the preset to restore.
+      required: true
+      selector:
+        text:
+
+delete_preset:
+  name: Delete preset
+  description: >-
+    Delete a previously saved preset by name.
+  fields:
+    name:
+      name: Preset name
+      description: The name of the preset to delete.
+      required: true
+      selector:
+        text:

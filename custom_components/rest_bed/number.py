@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from homeassistant.components.number import NumberEntity, NumberMode
-from homeassistant.const import EntityCategory
+from homeassistant.const import PERCENTAGE, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -16,6 +16,35 @@ PROFILE_KEYS = {
     "manualprofile": ("Manual", RestBedCoordinator),
     "backprofile": ("Back", RestBedCoordinator),
     "sideprofile": ("Side", RestBedCoordinator),
+}
+
+# Descriptions exposed as extra-state attributes for user reference.
+_DESC_FIRMNESS = (
+    "Overall firmness target for the mattress. The pump adjusts all zone "
+    "pressures proportionally toward this level. Higher = firmer."
+)
+_DESC_DISTORTION = (
+    "Pressure variation allowed between zones. Higher values produce more "
+    "differentiation between body areas (e.g. softer hips, firmer lumbar)."
+)
+_DESC_TOLERANCE = (
+    "Acceptable pressure deviation (0-10) before the pump auto-corrects. "
+    "Lower = tighter control with more frequent pump adjustments."
+)
+_DESC_SENSITIVITY = (
+    "Sensor sensitivity for body detection. Higher values make the bed more "
+    "responsive to small movements and lighter body weights."
+)
+_DESC_ZONE = {
+    "manualprofile": "Target firmness for the {zone} zone in Manual mode.",
+    "backprofile": (
+        "Target firmness for the {zone} zone when Position mode "
+        "detects back sleeping."
+    ),
+    "sideprofile": (
+        "Target firmness for the {zone} zone when Position mode "
+        "detects side sleeping."
+    ),
 }
 
 
@@ -43,20 +72,24 @@ class RestBedFirmnessNumber(RestBedEntity, NumberEntity):
     _attr_name = "Firmness"
     _attr_icon = "mdi:gauge"
     _attr_native_min_value = 0
-    _attr_native_max_value = 50
-    _attr_native_step = 1
+    _attr_native_max_value = 100
+    _attr_native_step = 2
+    _attr_native_unit_of_measurement = PERCENTAGE
     _attr_mode = NumberMode.SLIDER
+    _description = _DESC_FIRMNESS
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "firmness")
 
     @property
     def native_value(self) -> float | None:
-        return self.coordinator.data.get("preferences", {}).get("firmness")
+        raw = self.coordinator.data.get("preferences", {}).get("firmness")
+        return raw * 2 if raw is not None else None
 
     async def async_set_native_value(self, value: float) -> None:
-        await self.coordinator.pump.set_firmness(int(value))
-        self.coordinator.data.get("preferences", {})["firmness"] = int(value)
+        raw = int(value / 2)
+        await self.coordinator.pump.set_firmness(raw)
+        self.coordinator.data.get("preferences", {})["firmness"] = raw
         self.async_write_ha_state()
 
 
@@ -64,20 +97,24 @@ class RestBedDistortionNumber(RestBedEntity, NumberEntity):
     _attr_name = "Distortion"
     _attr_icon = "mdi:tune-vertical"
     _attr_native_min_value = 0
-    _attr_native_max_value = 50
-    _attr_native_step = 1
+    _attr_native_max_value = 100
+    _attr_native_step = 2
+    _attr_native_unit_of_measurement = PERCENTAGE
     _attr_mode = NumberMode.SLIDER
+    _description = _DESC_DISTORTION
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "distortion")
 
     @property
     def native_value(self) -> float | None:
-        return self.coordinator.data.get("preferences", {}).get("distortion")
+        raw = self.coordinator.data.get("preferences", {}).get("distortion")
+        return raw * 2 if raw is not None else None
 
     async def async_set_native_value(self, value: float) -> None:
-        await self.coordinator.pump.set_distortion(int(value))
-        self.coordinator.data.get("preferences", {})["distortion"] = int(value)
+        raw = int(value / 2)
+        await self.coordinator.pump.set_distortion(raw)
+        self.coordinator.data.get("preferences", {})["distortion"] = raw
         self.async_write_ha_state()
 
 
@@ -89,6 +126,7 @@ class RestBedToleranceNumber(RestBedEntity, NumberEntity):
     _attr_native_step = 1
     _attr_mode = NumberMode.BOX
     _attr_entity_category = EntityCategory.CONFIG
+    _description = _DESC_TOLERANCE
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "tolerance")
@@ -109,8 +147,10 @@ class RestBedSensitivityNumber(RestBedEntity, NumberEntity):
     _attr_native_min_value = 0
     _attr_native_max_value = 100
     _attr_native_step = 1
+    _attr_native_unit_of_measurement = PERCENTAGE
     _attr_mode = NumberMode.SLIDER
     _attr_entity_category = EntityCategory.CONFIG
+    _description = _DESC_SENSITIVITY
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "sensitivity")
@@ -128,8 +168,9 @@ class RestBedSensitivityNumber(RestBedEntity, NumberEntity):
 class RestBedZoneNumber(RestBedEntity, NumberEntity):
     _attr_icon = "mdi:waves"
     _attr_native_min_value = 0
-    _attr_native_max_value = 50
-    _attr_native_step = 1
+    _attr_native_max_value = 100
+    _attr_native_step = 2
+    _attr_native_unit_of_measurement = PERCENTAGE
     _attr_mode = NumberMode.SLIDER
 
     def __init__(
@@ -144,6 +185,7 @@ class RestBedZoneNumber(RestBedEntity, NumberEntity):
         self._profile_key = profile_key
         self._zone_idx = zone_idx
         self._attr_name = f"{profile_label} {zone_name}"
+        self._description = _DESC_ZONE[profile_key].format(zone=zone_name)
 
     @property
     def native_value(self) -> float | None:
@@ -151,13 +193,14 @@ class RestBedZoneNumber(RestBedEntity, NumberEntity):
             self._profile_key, []
         )
         if self._zone_idx < len(profile):
-            return profile[self._zone_idx]
+            return profile[self._zone_idx] * 2
         return None
 
     async def async_set_native_value(self, value: float) -> None:
+        raw = int(value / 2)
         prefs = self.coordinator.data.get("preferences", {})
         profile = list(prefs.get(self._profile_key, [0, 0, 0, 0]))
-        profile[self._zone_idx] = int(value)
+        profile[self._zone_idx] = raw
 
         setter = {
             "manualprofile": self.coordinator.pump.set_manual_profile,

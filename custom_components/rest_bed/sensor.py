@@ -44,6 +44,7 @@ class RestBedHeartRateSensor(RestBedEntity, SensorEntity):
     _attr_icon = "mdi:heart-pulse"
     _attr_native_unit_of_measurement = "bpm"
     _attr_state_class = SensorStateClass.MEASUREMENT
+    _description = "Real-time heart rate detected via ballistocardiography through the mattress pressure sensor fabric."
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "heartrate")
@@ -59,6 +60,7 @@ class RestBedRespirationSensor(RestBedEntity, SensorEntity):
     _attr_icon = "mdi:lungs"
     _attr_native_unit_of_measurement = "br/min"
     _attr_state_class = SensorStateClass.MEASUREMENT
+    _description = "Breathing rate measured from chest movement detected by the pressure sensor fabric."
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "respiration")
@@ -72,6 +74,7 @@ class RestBedRespirationSensor(RestBedEntity, SensorEntity):
 class RestBedPositionSensor(RestBedEntity, SensorEntity):
     _attr_name = "Position"
     _attr_icon = "mdi:human"
+    _description = "Current body position detected by pressure mapping (empty, back, side, stomach, upright)."
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "position")
@@ -87,6 +90,7 @@ class RestBedCpuTempSensor(RestBedEntity, SensorEntity):
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _description = "Internal processor temperature of the pump's Smart Master Control Unit."
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "cpu_temp")
@@ -102,6 +106,7 @@ class RestBedEnclosureTempSensor(RestBedEntity, SensorEntity):
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _description = "Temperature inside the pump housing."
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "enclosure_temp")
@@ -121,6 +126,10 @@ class RestBedAirPressureSensor(RestBedEntity, SensorEntity):
         super().__init__(coordinator, f"air_pressure_{zone_idx}")
         self._zone_idx = zone_idx
         self._attr_name = f"Pressure {zone_name}"
+        self._description = (
+            f"Current measured air pressure in the {zone_name} air chamber "
+            "(actual pressure, not the target)."
+        )
 
     @property
     def native_value(self) -> int | None:
@@ -134,6 +143,7 @@ class RestBedFirmwareSensor(RestBedEntity, SensorEntity):
     _attr_name = "Firmware"
     _attr_icon = "mdi:chip"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _description = "Installed firmware version on the pump."
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "firmware")

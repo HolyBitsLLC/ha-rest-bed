@@ -34,6 +34,7 @@ async def async_setup_entry(
 class RestBedBodyPresentSensor(RestBedEntity, BinarySensorEntity):
     _attr_name = "Occupancy"
     _attr_device_class = BinarySensorDeviceClass.OCCUPANCY
+    _description = "Whether someone is currently lying on this side of the bed, detected via the pressure sensor fabric."
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "body_present")
@@ -46,6 +47,7 @@ class RestBedBodyPresentSensor(RestBedEntity, BinarySensorEntity):
 class RestBedMovingSensor(RestBedEntity, BinarySensorEntity):
     _attr_name = "Moving"
     _attr_device_class = BinarySensorDeviceClass.MOVING
+    _description = "Whether the person is currently moving or shifting position."
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "moving")
@@ -59,6 +61,7 @@ class RestBedFillingSensor(RestBedEntity, BinarySensorEntity):
     _attr_name = "Air Filling"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
     _attr_icon = "mdi:fan"
+    _description = "Whether the pump is currently running to adjust air pressure in the chambers."
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "filling")
@@ -72,6 +75,7 @@ class RestBedOverheatedSensor(RestBedEntity, BinarySensorEntity):
     _attr_name = "Overheated"
     _attr_device_class = BinarySensorDeviceClass.HEAT
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _description = "Whether the pump has exceeded its safe operating temperature and may throttle adjustments."
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:
         super().__init__(coordinator, "overheated")
