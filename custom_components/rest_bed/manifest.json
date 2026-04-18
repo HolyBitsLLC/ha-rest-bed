@@ -1,0 +1,11 @@
+{
+  "domain": "rest_bed",
+  "name": "ReST Performance Bed",
+  "codeowners": ["@claywd"],
+  "config_flow": true,
+  "documentation": "https://github.com/HolyBitsLLC/ha-rest-bed",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "requirements": [],
+  "version": "1.0.0"
+}
