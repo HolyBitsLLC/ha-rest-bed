@@ -1,0 +1,55 @@
+name: Validate
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install HA core for hassfest
+        run: |
+          pip install homeassistant
+
+      - name: Validate with hassfest
+        run: |
+          python -m homeassistant.scripts.check_config || true
+          python -c "
+          import json, sys
+          m = json.load(open('custom_components/rest_bed/manifest.json'))
+          required = ['domain', 'name', 'version', 'codeowners', 'config_flow', 'iot_class']
+          missing = [k for k in required if k not in m]
+          if missing:
+              print(f'Missing manifest keys: {missing}', file=sys.stderr)
+              sys.exit(1)
+          print('Manifest valid:', json.dumps(m, indent=2))
+          "
+
+      - name: Check JSON validity
+        run: |
+          python -m json.tool custom_components/rest_bed/manifest.json > /dev/null
+          python -m json.tool custom_components/rest_bed/strings.json > /dev/null
+          python -m json.tool hacs.json > /dev/null
+
+      - name: Syntax check Python files
+        run: |
+          python -m py_compile custom_components/rest_bed/__init__.py
+          python -m py_compile custom_components/rest_bed/api.py
+          python -m py_compile custom_components/rest_bed/config_flow.py
+          python -m py_compile custom_components/rest_bed/coordinator.py
+          python -m py_compile custom_components/rest_bed/entity.py
+          python -m py_compile custom_components/rest_bed/number.py
+          python -m py_compile custom_components/rest_bed/select.py
+          python -m py_compile custom_components/rest_bed/sensor.py
+          python -m py_compile custom_components/rest_bed/binary_sensor.py
+          python -m py_compile custom_components/rest_bed/switch.py
+          python -m py_compile custom_components/rest_bed/const.py
