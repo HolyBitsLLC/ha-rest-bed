@@ -1,0 +1,21 @@
+set_wifi:
+  name: Set WiFi credentials
+  description: >-
+    Update the WiFi SSID and password on all configured ReST bed pumps.
+    The pumps will disconnect and reconnect to the new network.
+    WARNING: If the credentials are wrong the pumps will become unreachable
+    until recovered via their direct-mode hotspot.
+  fields:
+    ssid:
+      name: SSID
+      description: The WiFi network name to connect to.
+      required: true
+      selector:
+        text:
+    password:
+      name: Password
+      description: The WiFi network password.
+      required: true
+      selector:
+        text:
+          type: password

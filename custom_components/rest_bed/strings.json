@@ -3,9 +3,16 @@
     "step": {
       "user": {
         "title": "ReST Performance Bed",
-        "description": "Enter the IP address of your ReST bed pump. Each side of a split bed has its own pump — add each separately.",
+        "description": "Select a discovered pump or choose manual entry. Each side of a split bed has its own pump — add each separately.",
         "data": {
-          "host": "Pump IP address"
+          "pump": "Pump"
+        }
+      },
+      "manual": {
+        "title": "Manual Pump Setup",
+        "description": "Enter the IP address or hostname of your ReST bed pump.",
+        "data": {
+          "host": "Pump host (IP or hostname)"
         }
       },
       "confirm": {
@@ -14,12 +21,28 @@
       }
     },
     "error": {
-      "cannot_connect": "Unable to connect to the pump. Verify the IP address and that the pump is on the network."
+      "cannot_connect": "Unable to connect to the pump. Verify the host and that the pump is on the network."
     },
     "abort": {
       "already_configured": "This pump is already configured.",
       "cannot_connect": "Unable to connect to the discovered pump.",
       "not_rest_bed": "Discovered device is not a ReST bed pump."
+    }
+  },
+  "services": {
+    "set_wifi": {
+      "name": "Set WiFi credentials",
+      "description": "Update the WiFi SSID and password on a ReST bed pump. The pump will disconnect and reconnect to the new network. WARNING: If the credentials are wrong the pump will become unreachable until recovered via its direct-mode hotspot.",
+      "fields": {
+        "ssid": {
+          "name": "SSID",
+          "description": "The WiFi network name to connect to."
+        },
+        "password": {
+          "name": "Password",
+          "description": "The WiFi network password."
+        }
+      }
     }
   }
 }

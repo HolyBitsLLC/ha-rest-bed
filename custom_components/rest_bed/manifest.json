@@ -3,11 +3,11 @@
   "name": "ReST Performance Bed",
   "codeowners": ["@claywd"],
   "config_flow": true,
-  "dependencies": ["network"],
+  "dependencies": ["network", "zeroconf"],
   "documentation": "https://github.com/HolyBitsLLC/ha-rest-bed",
   "integration_type": "device",
   "iot_class": "local_push",
   "requirements": [],
-  "version": "1.1.1",
+  "version": "1.2.0",
   "zeroconf": ["_http._tcp.local."]
 }

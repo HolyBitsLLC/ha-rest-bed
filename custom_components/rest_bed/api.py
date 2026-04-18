@@ -90,6 +90,20 @@ class RestBedPump:
     async def set_side_profile(self, values: list[int]) -> None:
         await self._put("/api/preferences/sideprofile", values)
 
+    # ── WiFi management ─────────────────────────────────────────────
+
+    async def set_wifi(self, ssid: str, password: str) -> None:
+        """Set WiFi credentials. The pump will disconnect and reconnect."""
+        await self._put("/api/wifi", {"ssid": ssid, "password": password})
+
+    async def get_wifi_list(self) -> list[str]:
+        """Return list of SSIDs visible to the pump."""
+        return await self._get("/api/wifi/list")
+
+    async def set_wifi_mode(self, mode: str) -> None:
+        """Switch between 'direct' and 'indirect' WiFi mode."""
+        await self._put("/api/wifi/mode", mode)
+
     # ── SSE stream ──────────────────────────────────────────────────
 
     async def listen_sse(
