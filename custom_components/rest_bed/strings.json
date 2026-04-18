@@ -7,13 +7,19 @@
         "data": {
           "host": "Pump IP address"
         }
+      },
+      "confirm": {
+        "title": "ReST Performance Bed Discovered",
+        "description": "Found **{name}** on your network. Add this pump?"
       }
     },
     "error": {
       "cannot_connect": "Unable to connect to the pump. Verify the IP address and that the pump is on the network."
     },
     "abort": {
-      "already_configured": "This pump is already configured."
+      "already_configured": "This pump is already configured.",
+      "cannot_connect": "Unable to connect to the discovered pump.",
+      "not_rest_bed": "Discovered device is not a ReST bed pump."
     }
   }
 }
