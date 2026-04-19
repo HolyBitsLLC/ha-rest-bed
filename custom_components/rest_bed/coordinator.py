@@ -12,6 +12,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import RestBedPump
+from .calibration import CalibrationManager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class RestBedCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._sse_task: asyncio.Task | None = None
         self._sse_stop = asyncio.Event()
         self.device_info_data: dict[str, Any] = {}
+        self.calibration = CalibrationManager(self)
 
     # ── lifecycle ───────────────────────────────────────────────────
 

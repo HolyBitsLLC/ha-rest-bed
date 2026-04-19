@@ -19,6 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
+    Platform.BUTTON,
     Platform.NUMBER,
     Platform.SELECT,
     Platform.SENSOR,
@@ -38,6 +39,10 @@ SERVICE_SET_WIFI_SCHEMA = vol.Schema(
 SERVICE_SAVE_PRESET = "save_preset"
 SERVICE_RESTORE_PRESET = "restore_preset"
 SERVICE_DELETE_PRESET = "delete_preset"
+
+SERVICE_START_CALIBRATION = "start_calibration"
+SERVICE_CANCEL_CALIBRATION = "cancel_calibration"
+SERVICE_ADVANCE_CALIBRATION = "advance_calibration"
 
 SERVICE_PRESET_NAME_SCHEMA = vol.Schema(
     {vol.Required("name"): cv.string}
@@ -189,6 +194,32 @@ async def async_setup_entry(
             schema=SERVICE_PRESET_NAME_SCHEMA,
         )
 
+        async def _get_first_coordinator() -> RestBedCoordinator:
+            entries = hass.config_entries.async_entries(DOMAIN)
+            return entries[0].runtime_data
+
+        async def handle_start_calibration(call: ServiceCall) -> None:
+            coord = await _get_first_coordinator()
+            await coord.calibration.start()
+
+        async def handle_cancel_calibration(call: ServiceCall) -> None:
+            coord = await _get_first_coordinator()
+            await coord.calibration.cancel()
+
+        async def handle_advance_calibration(call: ServiceCall) -> None:
+            coord = await _get_first_coordinator()
+            await coord.calibration.advance()
+
+        hass.services.async_register(
+            DOMAIN, SERVICE_START_CALIBRATION, handle_start_calibration,
+        )
+        hass.services.async_register(
+            DOMAIN, SERVICE_CANCEL_CALIBRATION, handle_cancel_calibration,
+        )
+        hass.services.async_register(
+            DOMAIN, SERVICE_ADVANCE_CALIBRATION, handle_advance_calibration,
+        )
+
     return True
 
 
@@ -203,5 +234,8 @@ async def async_unload_entry(
         hass.services.async_remove(DOMAIN, SERVICE_SAVE_PRESET)
         hass.services.async_remove(DOMAIN, SERVICE_RESTORE_PRESET)
         hass.services.async_remove(DOMAIN, SERVICE_DELETE_PRESET)
+        hass.services.async_remove(DOMAIN, SERVICE_START_CALIBRATION)
+        hass.services.async_remove(DOMAIN, SERVICE_CANCEL_CALIBRATION)
+        hass.services.async_remove(DOMAIN, SERVICE_ADVANCE_CALIBRATION)
         hass.data.pop(DOMAIN, None)
     return unloaded

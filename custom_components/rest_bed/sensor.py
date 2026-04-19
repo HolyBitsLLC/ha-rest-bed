@@ -33,6 +33,7 @@ async def async_setup_entry(
         RestBedCpuTempSensor(coordinator),
         RestBedEnclosureTempSensor(coordinator),
         RestBedFirmwareSensor(coordinator),
+        RestBedCalibrationStatusSensor(coordinator),
     ]
     for idx, zone in enumerate(ZONE_NAMES):
         entities.append(RestBedAirPressureSensor(coordinator, idx, zone))
@@ -151,3 +152,29 @@ class RestBedFirmwareSensor(RestBedEntity, SensorEntity):
     @property
     def native_value(self) -> str | None:
         return self.coordinator.data.get("firmware")
+
+
+class RestBedCalibrationStatusSensor(RestBedEntity, SensorEntity):
+    _attr_name = "Calibration Status"
+    _attr_icon = "mdi:tune"
+    _description = (
+        "Current step of the pressure sensor calibration workflow. "
+        "Shows idle when no calibration is running."
+    )
+
+    def __init__(self, coordinator: RestBedCoordinator) -> None:
+        super().__init__(coordinator, "calibration_status")
+
+    @property
+    def native_value(self) -> str | None:
+        return self.coordinator.calibration.state.step.value
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        state = self.coordinator.calibration.state
+        attrs: dict = {"description": self._description}
+        attrs["message"] = state.message
+        attrs["progress"] = state.progress_pct
+        if state.computed_targets:
+            attrs["computed_targets"] = state.computed_targets
+        return attrs

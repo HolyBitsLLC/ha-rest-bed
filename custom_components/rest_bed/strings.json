@@ -73,6 +73,18 @@
           "description": "The name of the preset to delete."
         }
       }
+    },
+    "start_calibration": {
+      "name": "Start calibration",
+      "description": "Begin the multi-step pressure sensor calibration workflow."
+    },
+    "cancel_calibration": {
+      "name": "Cancel calibration",
+      "description": "Cancel an in-progress calibration and restore previous settings."
+    },
+    "advance_calibration": {
+      "name": "Advance calibration",
+      "description": "Manually advance the calibration to the next step."
     }
   }
 }

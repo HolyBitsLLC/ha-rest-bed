@@ -58,3 +58,26 @@ delete_preset:
       required: true
       selector:
         text:
+
+start_calibration:
+  name: Start calibration
+  description: >-
+    Begin the multi-step pressure sensor calibration workflow. The bed
+    switches to flat mode, captures an empty-bed pressure baseline, then
+    waits for you to lie down to record your body pressure profile.
+    Optimal zone pressures are computed and applied as the back profile.
+    The previous operating mode is restored when calibration completes.
+    Monitor progress via the "Calibration Status" sensor.
+
+cancel_calibration:
+  name: Cancel calibration
+  description: >-
+    Cancel an in-progress calibration and restore the bed to its
+    previous operating mode and settings.
+
+advance_calibration:
+  name: Advance calibration
+  description: >-
+    Manually advance the calibration to the next step. Use this if the
+    automatic body detection doesn't trigger (e.g., confirm you're on
+    the bed during the "waiting_body" step).
