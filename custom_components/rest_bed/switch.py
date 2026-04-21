@@ -36,9 +36,9 @@ class RestBedQuietSwitch(RestBedEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self.coordinator.pump.set_quiet(True)
         self.coordinator.data.get("preferences", {})["quiet"] = True
-        self.async_write_ha_state()
+        self._async_commit_coordinator_data()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self.coordinator.pump.set_quiet(False)
         self.coordinator.data.get("preferences", {})["quiet"] = False
-        self.async_write_ha_state()
+        self._async_commit_coordinator_data()

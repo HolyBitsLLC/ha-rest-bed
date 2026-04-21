@@ -30,9 +30,10 @@ class RestBedStartCalibrationButton(RestBedEntity, ButtonEntity):
     _attr_icon = "mdi:tune"
     _description = (
         "Start the multi-step pressure sensor calibration. "
-        "The bed will switch to flat mode, capture an empty-bed baseline, "
-        "then guide you to lie down to capture your body pressure profile. "
-        "Optimal zone pressures are computed and applied automatically."
+        "The bed will switch to pressure-equalization mode, capture an "
+        "empty-bed baseline, then guide you to lie down to capture your "
+        "body pressure profile. Optimal zone pressures are computed and "
+        "applied to Manual mode plus the detected Back or Side profile."
     )
 
     def __init__(self, coordinator: RestBedCoordinator) -> None:

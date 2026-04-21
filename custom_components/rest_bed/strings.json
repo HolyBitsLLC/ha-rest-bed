@@ -76,7 +76,7 @@
     },
     "start_calibration": {
       "name": "Start calibration",
-      "description": "Begin the multi-step pressure sensor calibration workflow."
+      "description": "Begin the guided baseline calibration workflow for pressure sensing and profile tuning."
     },
     "cancel_calibration": {
       "name": "Cancel calibration",

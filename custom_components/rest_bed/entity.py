@@ -28,6 +28,14 @@ class RestBedEntity(CoordinatorEntity[RestBedCoordinator]):
         self._pump_id: str = device["id"]
         self._attr_unique_id = f"{self._pump_id}_{key}"
 
+    def _async_commit_coordinator_data(self) -> None:
+        """Publish local coordinator mutations to all listening entities."""
+        if self.coordinator.data is None:
+            self.async_write_ha_state()
+            return
+
+        self.coordinator.async_set_updated_data(dict(self.coordinator.data))
+
     @property
     def device_info(self) -> DeviceInfo:
         device = self.coordinator.device_info_data

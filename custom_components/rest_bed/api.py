@@ -52,6 +52,9 @@ class RestBedPump:
     async def get_air(self) -> dict:
         return await self._get("/api/air")
 
+    async def get_surface(self) -> dict:
+        return await self._get("/api/surface")
+
     async def get_temperature(self) -> dict:
         return await self._get("/api/temperature")
 

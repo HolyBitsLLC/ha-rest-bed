@@ -175,6 +175,10 @@ class RestBedCalibrationStatusSensor(RestBedEntity, SensorEntity):
         attrs: dict = {"description": self._description}
         attrs["message"] = state.message
         attrs["progress"] = state.progress_pct
+        if state.detected_position:
+            attrs["detected_position"] = state.detected_position
+        if state.applied_profile:
+            attrs["applied_profile"] = state.applied_profile
         if state.computed_targets:
             attrs["computed_targets"] = state.computed_targets
         return attrs

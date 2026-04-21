@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from .api import RestBedPump
 from .calibration import CalibrationManager
+from .const import POSITION_PROFILE_OPTIONS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +36,20 @@ class RestBedCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._sse_stop = asyncio.Event()
         self.device_info_data: dict[str, Any] = {}
         self.calibration = CalibrationManager(self)
+        self._selected_position_profile = POSITION_PROFILE_OPTIONS[0]
+
+    @property
+    def selected_position_profile(self) -> str:
+        return self._selected_position_profile
+
+    def set_selected_position_profile(self, profile: str) -> None:
+        if profile not in POSITION_PROFILE_OPTIONS:
+            raise ValueError(f"Unsupported position profile: {profile}")
+        if profile == self._selected_position_profile:
+            return
+
+        self._selected_position_profile = profile
+        self.async_update_listeners()
 
     # ── lifecycle ───────────────────────────────────────────────────
 
@@ -121,6 +136,7 @@ class RestBedCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "body",
             "air",
             "temperature",
+            "surface",
         ):
             if event_type == "device":
                 self.device_info_data = data

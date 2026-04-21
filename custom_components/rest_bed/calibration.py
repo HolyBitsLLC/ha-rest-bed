@@ -1,7 +1,7 @@
 """Multi-step pressure-sensor calibration workflow for ReST bed pumps.
 
 Mirrors the mobile app calibration:
-  1. Ensure bed is empty → switch to "flat" mode → wait for chambers to equalize.
+    1. Ensure bed is empty → switch to pressure-equalization mode → wait for chambers to equalize.
   2. Capture the empty-bed pressure surface baseline.
   3. User lies on bed → wait for presence detection → capture body-on-bed surface.
   4. Compute optimal zone pressure targets from the pressure delta.
@@ -15,6 +15,7 @@ meets the required conditions (e.g. body detected for step 3).
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
@@ -22,6 +23,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .coordinator import RestBedCoordinator
+
+from .const import CALIBRATION_PREP_MODE, POSITION_PROFILE_TO_KEY
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,7 +41,7 @@ class CalibrationStep(str, Enum):
     """Steps in the calibration workflow."""
 
     IDLE = "idle"
-    PREPARING = "preparing"           # Switching to flat mode, waiting to equalize
+    PREPARING = "preparing"           # Switching modes, waiting to equalize
     WAITING_EMPTY = "waiting_empty"   # Waiting for user to get off bed
     EQUALIZING = "equalizing"         # Chambers equalizing
     CAPTURING_BASELINE = "capturing_baseline"
@@ -61,6 +64,8 @@ class CalibrationState:
     baseline_surface: list[int] | None = None
     body_surface: list[int] | None = None
     computed_targets: list[int] | None = None
+    detected_position: str | None = None
+    applied_profile: str | None = None
     progress_pct: int = 0
 
 
@@ -96,7 +101,7 @@ class CalibrationManager:
         # Save current settings so we can restore after calibration
         prefs = self._coord.data.get("preferences", {})
         self.state.previous_mode = prefs.get("mode", "pressure")
-        self.state.previous_preferences = dict(prefs)
+        self.state.previous_preferences = copy.deepcopy(prefs)
 
         self._notify()
 
@@ -112,11 +117,10 @@ class CalibrationManager:
             except asyncio.CancelledError:
                 pass
 
-        # Restore previous mode
         try:
-            await self._coord.pump.set_mode(self.state.previous_mode)
+            await self._restore_previous_preferences()
         except Exception:
-            _LOGGER.exception("Failed to restore mode after cancellation")
+            _LOGGER.exception("Failed to restore settings after cancellation")
 
         self.state.step = CalibrationStep.IDLE
         self.state.message = "Calibration cancelled"
@@ -157,19 +161,36 @@ class CalibrationManager:
             raise
         except Exception as exc:
             _LOGGER.exception("Calibration failed")
+            restore_suffix = ""
+            try:
+                await self._restore_previous_preferences()
+                restore_suffix = " Previous settings were restored."
+            except Exception:
+                _LOGGER.exception(
+                    "Failed to restore settings after calibration error"
+                )
+                restore_suffix = (
+                    " Previous settings could not be fully restored."
+                )
             self.state.step = CalibrationStep.FAILED
-            self.state.message = f"Calibration failed: {exc}"
+            self.state.message = f"Calibration failed: {exc}.{restore_suffix}"
             self._notify()
 
     async def _step_prepare(self) -> None:
-        """Switch to flat mode for equalization."""
+        """Switch to pressure mode for baseline equalization."""
         self.state.step = CalibrationStep.PREPARING
-        self.state.message = "Switching to flat mode…"
+        self.state.message = (
+            "Switching to pressure-equalization mode for baseline capture…"
+        )
         self.state.progress_pct = 5
         self._notify()
 
-        await self._coord.pump.set_mode("flat")
-        _LOGGER.info("Calibration: switched to flat mode")
+        await self._coord.pump.set_mode(CALIBRATION_PREP_MODE)
+        self._coord.data.get("preferences", {})["mode"] = CALIBRATION_PREP_MODE
+        self._notify()
+        _LOGGER.info(
+            "Calibration: switched to %s mode", CALIBRATION_PREP_MODE
+        )
 
     async def _step_wait_empty(self) -> None:
         """Wait for the bed to be empty."""
@@ -269,9 +290,13 @@ class CalibrationManager:
             await asyncio.sleep(1)
 
         self.state.body_surface = await self._capture_surface_average()
+        self.state.detected_position = self._normalize_position_profile(
+            self._coord.data.get("body", {}).get("position")
+        )
         _LOGGER.info(
-            "Calibration: body profile captured (%d cells)",
+            "Calibration: body profile captured (%d cells, detected=%s)",
             len(self.state.body_surface),
+            self.state.detected_position,
         )
 
     async def _step_compute(self) -> None:
@@ -347,15 +372,29 @@ class CalibrationManager:
         if not targets or len(targets) != 4:
             raise ValueError("Computed targets are invalid")
 
-        # Apply as the back profile (primary sleeping position)
-        await self._coord.pump.set_back_profile(targets)
-        _LOGGER.info("Calibration: applied back profile: %s", targets)
+        profile_name = self.state.detected_position or "back"
+        profile_key = POSITION_PROFILE_TO_KEY.get(profile_name, "backprofile")
+        profile_setter = {
+            "backprofile": self._coord.pump.set_back_profile,
+            "sideprofile": self._coord.pump.set_side_profile,
+        }[profile_key]
+
+        await profile_setter(targets)
+        self.state.applied_profile = profile_name
+        _LOGGER.info(
+            "Calibration: applied %s profile: %s", profile_name, targets
+        )
 
         # Also update manual profile for immediate use
         await self._coord.pump.set_manual_profile(targets)
+        prefs = self._coord.data.get("preferences", {})
+        prefs[profile_key] = list(targets)
+        prefs["manualprofile"] = list(targets)
 
         # Restore the previous mode
         await self._coord.pump.set_mode(self.state.previous_mode)
+        prefs["mode"] = self.state.previous_mode
+        self._notify()
         _LOGGER.info(
             "Calibration: restored mode to '%s'", self.state.previous_mode
         )
@@ -366,7 +405,7 @@ class CalibrationManager:
         """Capture multiple surface readings and return the averaged grid."""
         samples: list[list[int]] = []
         for _ in range(SURFACE_SAMPLES):
-            resp = await self._coord.pump._get("/api/surface")
+            resp = await self._coord.pump.get_surface()
             pressures = resp.get("pressures", [])
             if pressures:
                 samples.append(pressures)
@@ -383,6 +422,40 @@ class CalibrationManager:
             averaged.append(round(total / len(samples)))
         return averaged
 
+    async def _restore_previous_preferences(self) -> None:
+        """Restore the previously saved preferences after cancel/failure."""
+        prefs = self.state.previous_preferences
+        if not prefs:
+            return
+
+        pump = self._coord.pump
+        if "firmness" in prefs:
+            await pump.set_firmness(prefs["firmness"])
+        if "distortion" in prefs:
+            await pump.set_distortion(prefs["distortion"])
+        if "tolerance" in prefs:
+            await pump.set_tolerance(prefs["tolerance"])
+        if "sensitivity" in prefs:
+            await pump.set_sensitivity(prefs["sensitivity"])
+        if "quiet" in prefs:
+            await pump.set_quiet(prefs["quiet"])
+        if "manualprofile" in prefs:
+            await pump.set_manual_profile(list(prefs["manualprofile"]))
+        if "backprofile" in prefs:
+            await pump.set_back_profile(list(prefs["backprofile"]))
+        if "sideprofile" in prefs:
+            await pump.set_side_profile(list(prefs["sideprofile"]))
+        if "mode" in prefs:
+            await pump.set_mode(prefs["mode"])
+
+        self._coord.data["preferences"] = copy.deepcopy(prefs)
+        self._notify()
+
+    def _normalize_position_profile(self, position: str | None) -> str:
+        if position == "side":
+            return "side"
+        return "back"
+
     def _notify(self) -> None:
         """Push updated calibration state to HA via coordinator."""
-        self._coord.async_set_updated_data(self._coord.data)
+        self._coord.async_set_updated_data(dict(self._coord.data))

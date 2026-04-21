@@ -5,8 +5,10 @@ Home Assistant custom integration for **ReST Performance** smart beds. Provides 
 ## Features
 
 - **SSE push updates** — real-time state via Server-Sent Events (no polling lag)
-- **Per-zone firmness control** — 4-zone sliders for manual, back, and side profiles (0–50)
-- **Mode selection** — manual, automatic, position, pressure
+- **Mode hierarchy support** — manual, automatic, position, and pressure modes
+- **Automatic tuning controls** — firmness and sensitivity controls surfaced directly in HA
+- **Per-zone firmness control** — 4-zone sliders for Manual mode plus a Position profile editor for Back/Side tuning
+- **Guided calibration** — captures an empty-bed surface baseline, then applies calibrated targets to Manual plus the detected Back/Side profile
 - **Sleep vitals** — heart rate, respiration, body position, occupancy detection
 - **Diagnostics** — CPU/enclosure temperature, firmware version, air pressure per zone
 - **Multi-pump** — each side of a split bed is a separate device
@@ -35,8 +37,8 @@ Copy `custom_components/rest_bed/` into your HA `config/custom_components/` dire
 
 | Platform | Count | Examples |
 |----------|-------|---------|
-| Number | 16 | Firmness, Distortion, Manual/Back/Side per zone |
-| Select | 1 | Mode (manual / automatic / position / pressure) |
+| Number | 20 | Firmness, Sensitivity, Manual per-zone, Position per-zone, advanced Back/Side editors |
+| Select | 2 | Mode, Position Profile |
 | Sensor | 11 | Heart rate, respiration, position, CPU temp, zone pressures, firmware |
 | Binary Sensor | 4 | Occupancy, moving, air filling, overheated |
 | Switch | 1 | Quiet mode |
@@ -97,6 +99,11 @@ python3 tools/rest_bed_setup.py dump --host 10.0.17.182
 | 2 | `/api/wifi/list` | GET | Returns visible SSIDs |
 | 3 | `/api/wifi` | PUT | `{"ssid": "...", "password": "..."}` |
 | 4 | `/api/wifi/mode` | PUT | `"indirect"` (switches from AP to client) |
+
+Position-mode editing is exposed two ways:
+
+- **Primary workflow** — switch the bed to `position`, choose `Position Profile` (`back` or `side`), then adjust the 4 `Position ...` sliders.
+- **Advanced workflow** — raw `Back ...` and `Side ...` number entities still exist for direct editing, but are disabled by default on new installs to keep the primary UI closer to the mobile app.
 
 ## Protocol
 

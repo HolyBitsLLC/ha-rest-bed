@@ -63,10 +63,12 @@ start_calibration:
   name: Start calibration
   description: >-
     Begin the multi-step pressure sensor calibration workflow. The bed
-    switches to flat mode, captures an empty-bed pressure baseline, then
-    waits for you to lie down to record your body pressure profile.
-    Optimal zone pressures are computed and applied as the back profile.
-    The previous operating mode is restored when calibration completes.
+    switches to pressure-equalization mode, captures an empty-bed
+    pressure baseline, then waits for you to lie down to record your
+    body pressure profile. Optimal zone pressures are computed and
+    applied as the Manual profile plus the detected Back or Side
+    profile. The previous operating mode is restored when calibration
+    completes.
     Monitor progress via the "Calibration Status" sensor.
 
 cancel_calibration:
