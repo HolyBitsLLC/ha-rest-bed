@@ -7,9 +7,11 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .api import RestBedPump
 from .coordinator import RestBedCoordinator
@@ -86,7 +88,18 @@ async def async_setup_entry(
     session = async_get_clientsession(hass)
     pump = RestBedPump(entry.data[CONF_HOST], session)
     coordinator = RestBedCoordinator(hass, pump)
-    await coordinator.async_setup()
+    try:
+        await coordinator.async_setup()
+    except UpdateFailed as err:
+        # A transient failure during setup (for example the pump being
+        # unreachable because of a brief network blip while Home Assistant
+        # starts) must not permanently fail the entry. ConfigEntryNotReady
+        # tells Home Assistant to retry setup with exponential backoff,
+        # which is the runtime contract `UpdateFailed` only satisfies inside
+        # a coordinator refresh.
+        raise ConfigEntryNotReady(
+            f"Unable to reach ReST pump at {pump.host}: {err}"
+        ) from err
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
